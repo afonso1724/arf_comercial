@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Loader2, ArrowLeft, Package, FileText, Download, Clock, CheckCircle } from 'lucide-react';
+import { apiUrl } from '../config/api';
 
 export default function MeusPedidos() {
   const [pedidos, setPedidos] = useState([]);
@@ -24,7 +25,7 @@ export default function MeusPedidos() {
   const fetchPedidos = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:3001/api/vendas/cliente/${clienteId}`, {
+      const res = await fetch(apiUrl(`/api/vendas/cliente/${clienteId}`), {
         headers: { 'x-access-token': token }
       });
       if (!res.ok) throw new Error('Erro ao buscar pedidos');
@@ -40,7 +41,7 @@ export default function MeusPedidos() {
   const handleDownloadFatura = async (vendaId) => {
     setGerandoFatura(vendaId);
     try {
-      const res = await fetch(`http://localhost:3001/api/notificacoes/${vendaId}/fatura/download`, {
+      const res = await fetch(apiUrl(`/api/notificacoes/${vendaId}/fatura/download`), {
         headers: { 'x-access-token': token }
       });
       if (!res.ok) {

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StatCard from '../components/StatCard';
 import { Package, TrendingUp, AlertTriangle, Wallet, Loader2, ChevronRight } from 'lucide-react';
+import { apiUrl } from '../config/api';
 
 // gráficos
 import { Line } from 'react-chartjs-2';
@@ -40,7 +41,7 @@ export default function Dashboard() {
 
   const fetchHistorico = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/relatorios/historico', {
+      const res = await fetch(apiUrl('/api/relatorios/historico'), {
         headers: { 'x-access-token': token }
       });
       if (!res.ok) throw new Error('Erro ao carregar histórico');
@@ -54,7 +55,7 @@ export default function Dashboard() {
   const fetchDados = async () => {
     try {
       // Usamos a rota de produtos que já sabemos que funciona
-      const res = await fetch('http://localhost:3001/api/produtos', {
+      const res = await fetch(apiUrl('/api/produtos'), {
         headers: { 'x-access-token': token }
       });
       const data = await res.json();

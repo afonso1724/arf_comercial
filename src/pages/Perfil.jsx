@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Mail, Phone, Calendar, User, Camera, Loader2, MapPin, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiUrl } from '../config/api';
 
 export default function Perfil() {
   const [admin, setAdmin] = useState(null);
@@ -16,7 +17,7 @@ export default function Perfil() {
   }, []);
 
   const fetchProfile = () => {
-    fetch('http://localhost:3001/api/perfil', {
+    fetch(apiUrl('/api/perfil'), {
       headers: { 'x-access-token': token } // Enviando o token para o backend
     })
       .then(res => {
@@ -42,7 +43,7 @@ export default function Perfil() {
     dataForUpload.append('foto', file);
 
     try {
-      const response = await fetch('http://localhost:3001/api/perfil/foto', {
+      const response = await fetch(apiUrl('/api/perfil/foto'), {
         method: 'POST',
         headers: { 'x-access-token': token }, // Token aqui também!
         body: dataForUpload,
@@ -64,7 +65,7 @@ export default function Perfil() {
 
   const handleSave = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/perfil', {
+      const response = await fetch(apiUrl('/api/perfil'), {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',

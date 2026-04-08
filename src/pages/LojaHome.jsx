@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, LogOut, Search, Package, ShoppingBag, Plus, X, Info, ChevronLeft, ChevronRight, Minus, Trash2, Bell } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiUrl } from '../config/api';
 
 export default function LojaHome() {
   const [produtos, setProdutos] = useState([]);
@@ -47,7 +48,7 @@ export default function LojaHome() {
 
   const fetchProdutos = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/produtos', {
+      const res = await fetch(apiUrl('/api/produtos'), {
         headers: { 'x-access-token': token }
       });
       const data = await res.json();
@@ -112,7 +113,7 @@ export default function LojaHome() {
     };
 
     try {
-      const res = await fetch('http://localhost:3001/api/vendas', {
+      const res = await fetch(apiUrl('/api/vendas'), {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

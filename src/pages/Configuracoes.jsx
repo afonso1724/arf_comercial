@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Settings, User, Lock, LogOut, Save, X, Loader2, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiUrl } from '../config/api';
 
 export default function Configuracoes() {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ export default function Configuracoes() {
   }, []);
 
   const fetchProfile = () => {
-    fetch('http://localhost:3001/api/perfil', {
+    fetch(apiUrl('/api/perfil'), {
       headers: { 'x-access-token': token }
     })
       .then(res => {
@@ -49,7 +50,7 @@ export default function Configuracoes() {
     }
 
     try {
-      const res = await fetch('http://localhost:3001/api/perfil/update', {
+      const res = await fetch(apiUrl('/api/perfil/update'), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -87,7 +88,7 @@ export default function Configuracoes() {
 
     setSavingPassword(true);
     try {
-      const res = await fetch('http://localhost:3001/api/perfil/password', {
+      const res = await fetch(apiUrl('/api/perfil/password'), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Loader2, Bell, CheckCircle, AlertCircle, BadgeAlert, X } from 'lucide-react';
+import { apiUrl } from '../config/api';
 
 export default function Notificacoes() {
   const [notificacoes, setNotificacoes] = useState([]);
@@ -27,8 +28,8 @@ export default function Notificacoes() {
   const fetchNotificacoes = async () => {
     try {
       const endpoint = isAdmin
-        ? 'http://localhost:3001/api/notificacoes/admin/lista'
-        : `http://localhost:3001/api/notificacoes/cliente/${clienteId}`;
+        ? apiUrl('/api/notificacoes/admin/lista')
+        : apiUrl(`/api/notificacoes/cliente/${clienteId}`);
       
       const res = await fetch(endpoint, {
         headers: { 'x-access-token': token }
@@ -46,7 +47,7 @@ export default function Notificacoes() {
 
   const marcarComoLida = async (notificacaoId) => {
     try {
-      const res = await fetch(`http://localhost:3001/api/notificacoes/${notificacaoId}/lida`, {
+      const res = await fetch(apiUrl(`/api/notificacoes/${notificacaoId}/lida`), {
         method: 'PUT',
         headers: { 'x-access-token': token }
       });

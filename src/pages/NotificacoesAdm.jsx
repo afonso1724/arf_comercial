@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Loader2, Bell, CheckCircle, BadgeAlert } from 'lucide-react';
+import { apiUrl } from '../config/api';
 
 export default function NotificacoesAdm() {
   const [notificacoes, setNotificacoes] = useState([]);
@@ -24,7 +25,7 @@ export default function NotificacoesAdm() {
 
   const fetchNotificacoes = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/notificacoes/admin/lista', {
+      const res = await fetch(apiUrl('/api/notificacoes/admin/lista'), {
         headers: { 'x-access-token': token }
       });
       if (!res.ok) throw new Error('Erro ao buscar notificações');
@@ -39,7 +40,7 @@ export default function NotificacoesAdm() {
 
   const marcarComoLida = async (notificacaoId) => {
     try {
-      const res = await fetch(`http://localhost:3001/api/notificacoes/${notificacaoId}/lida`, {
+      const res = await fetch(apiUrl(`/api/notificacoes/${notificacaoId}/lida`), {
         method: 'PUT',
         headers: { 'x-access-token': token }
       });

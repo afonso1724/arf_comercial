@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiUrl } from '../config/api';
 
 export default function LoginCliente() {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ const handleLogin = async (e) => {
   setLoading(true);
 
   try {
-      const res = await fetch('http://localhost:3001/api/cliente/login', {
+      const res = await fetch(apiUrl('/api/cliente/login'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, senha })

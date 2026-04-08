@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { User, Mail, Lock, Phone, MapPin, ArrowRight, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiUrl } from '../config/api';
 
 export default function RegisterCliente() {
   const navigate = useNavigate();
@@ -19,7 +20,7 @@ export default function RegisterCliente() {
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:3001/api/cliente/register', {
+      const res = await fetch(apiUrl('/api/cliente/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)

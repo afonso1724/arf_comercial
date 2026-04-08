@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Package, Plus, Trash2, Search, AlertCircle, X, Save, Image as ImageIcon, Edit3 } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiUrl } from '../config/api';
 
 export default function Inventario() {
   const [produtos, setProdutos] = useState([]);
@@ -21,7 +22,7 @@ export default function Inventario() {
 
   const fetchProdutos = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/produtos', {
+      const res = await fetch(apiUrl('/api/produtos'), {
         headers: { 'x-access-token': token }
       });
       const data = await res.json();
@@ -58,7 +59,7 @@ export default function Inventario() {
     formData.append('descricao', novoProduto.descricao);
     if (novoProduto.foto) formData.append('imagem', novoProduto.foto);
 
-    const url = editandoId ? `http://localhost:3001/api/produtos/${editandoId}` : 'http://localhost:3001/api/produtos';
+    const url = editandoId ? apiUrl(`/api/produtos/${editandoId}`) : apiUrl('/api/produtos');
     const metodo = editandoId ? 'PUT' : 'POST';
 
     try {
@@ -87,7 +88,7 @@ export default function Inventario() {
 
   const deleteProduto = async (id) => {
     if (!window.confirm("Tem certeza que deseja eliminar este produto?")) return;
-    const res = await fetch(`http://localhost:3001/api/produtos/${id}`, {
+    const res = await fetch(apiUrl(`/api/produtos/${id}`), {
       method: 'DELETE',
       headers: { 'x-access-token': token }
     });

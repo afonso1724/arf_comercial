@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Loader2, FileText, TrendingUp, Package } from 'lucide-react';
+import { apiUrl } from '../config/api';
 
 export default function Relatorios() {
   const [tipo, setTipo] = useState('mensal');
@@ -15,7 +16,7 @@ export default function Relatorios() {
     if (!token) return;
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:3001/api/relatorios?tipo=${tipo}&data=${data}`, {
+      const res = await fetch(apiUrl(`/api/relatorios?tipo=${tipo}&data=${data}`), {
         headers: { 'x-access-token': token }
       });
       if (!res.ok) throw new Error('Falha ao obter relatório');
@@ -35,7 +36,7 @@ export default function Relatorios() {
   const downloadPdf = async () => {
     setGeneratingPdf(true);
     try {
-      const res = await fetch(`http://localhost:3001/api/relatorios/pdf?tipo=${tipo}&data=${data}`, {
+      const res = await fetch(apiUrl(`/api/relatorios/pdf?tipo=${tipo}&data=${data}`), {
         headers: { 'x-access-token': token }
       });
       if (!res.ok) throw new Error('Não foi possível gerar PDF');

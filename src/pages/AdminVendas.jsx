@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Loader2, FileText, PlayCircle } from 'lucide-react';
+import { apiUrl } from '../config/api';
 
 export default function AdminVendas() {
   const [vendas, setVendas] = useState([]);
@@ -42,7 +43,7 @@ export default function AdminVendas() {
   const fetchVendas = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:3001/api/vendas', {
+      const res = await fetch(apiUrl('/api/vendas'), {
         headers: { 'x-access-token': token }
       });
       // debugging helpers
@@ -71,7 +72,7 @@ export default function AdminVendas() {
     if (!window.confirm('Deseja realmente validar esta venda?')) return;
     setValidating(id);
     try {
-      const res = await fetch(`http://localhost:3001/api/vendas/${id}/validar`, {
+      const res = await fetch(apiUrl(`/api/vendas/${id}/validar`), {
         method: 'PUT',
         headers: { 'x-access-token': token }
       });
@@ -92,7 +93,7 @@ export default function AdminVendas() {
   const handleGerarFatura = async (id) => {
     setGerandoFatura(id);
     try {
-      const res = await fetch(`http://localhost:3001/api/notificacoes/${id}/gerar-fatura`, {
+      const res = await fetch(apiUrl(`/api/notificacoes/${id}/gerar-fatura`), {
         method: 'POST',
         headers: { 'x-access-token': token }
       });
