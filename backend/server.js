@@ -1,7 +1,6 @@
 ﻿import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import path from 'path';
 import multer from 'multer';
 import jwt from 'jsonwebtoken';
 import supabase from './db.js';
@@ -15,12 +14,30 @@ const app = express();
 app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE'], allowedHeaders: ['Content-Type', 'x-access-token'] }));
 app.use(express.json());
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
-});
-const upload = multer({ storage });
-app.use('/uploads', express.static('uploads'));
+const upload = multer({ storage: multer.memoryStorage() });
+
+function sanitizeFileName(fileName) {
+  return fileName.replace(/[^\w.-]/g, '_');
+}
+
+async function uploadToSupabaseStorage(file, folder) {
+  const safeName = sanitizeFileName(file.originalname);
+  const filePath = `${folder}/${Date.now()}-${safeName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('imagens')
+    .upload(filePath, file.buffer, {
+      contentType: file.mimetype,
+      upsert: false
+    });
+
+  if (uploadError) {
+    throw uploadError;
+  }
+
+  const { data } = supabase.storage.from('imagens').getPublicUrl(filePath);
+  return data.publicUrl;
+}
 
 app.post('/api/login', async (req, res) => {
   try {
@@ -129,7 +146,7 @@ app.get('/api/perfil', verifyJWT, async (req, res) => {
 app.post('/api/perfil/foto', verifyJWT, upload.single('foto'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).send('Nenhum ficheiro enviado.');
-    const urlFoto = `http://localhost:3001/uploads/${req.file.filename}`;
+    const urlFoto = await uploadToSupabaseStorage(req.file, 'imagens/admins');
 
     const { error } = await supabase
       .from('usuarios')
@@ -216,7 +233,7 @@ app.get('/api/produtos', verifyJWT, async (req, res) => {
 app.post('/api/produtos', verifyJWT, upload.single('imagem'), async (req, res) => {
   try {
     const { nome, categoria, quantidade, preco_venda, preco_custo, descricao } = req.body;
-    const imagem_url = req.file ? `http://localhost:3001/uploads/${req.file.filename}` : null;
+    const imagem_url = req.file ? await uploadToSupabaseStorage(req.file, 'imagens/produtos') : null;
 
     const { data, error } = await supabase
       .from('produtos')
@@ -237,7 +254,7 @@ app.put('/api/produtos/:id', verifyJWT, upload.single('imagem'), async (req, res
     const updateData = { nome, categoria, quantidade, preco_venda, preco_custo, descricao };
 
     if (req.file) {
-      updateData.imagem_url = `http://localhost:3001/uploads/${req.file.filename}`;
+      updateData.imagem_url = await uploadToSupabaseStorage(req.file, 'imagens/produtos');
     }
 
     const { error } = await supabase
