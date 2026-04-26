@@ -2,24 +2,25 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, LogOut, Search, Package, ShoppingBag, Plus, X, Info, ChevronLeft, ChevronRight, Minus, Trash2, Bell } from 'lucide-react';
 import { toast } from 'sonner';
-import { useAuthCart } from '../contexts/AuthCartContext';
 import { apiUrl } from '../config/api';
 
 export default function LojaHome() {
   const [produtos, setProdutos] = useState([]);
   const [busca, setBusca] = useState('');
+  const [carrinho, setCarrinho] = useState(() => {
+    // Carrega carrinho do localStorage ao inicializar
+    const saved = localStorage.getItem('carrinho_cliente');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [isCarrinhoAberto, setIsCarrinhoAberto] = useState(false);
   const [produtoSelecionado, setProdutoSelecionado] = useState(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [enviando, setEnviando] = useState(false); // Estado para o loading do botão
   const navigate = useNavigate();
-
-  const { user, cart, addItemToCart, updateCartQuantity, removeItemFromCart, clearCart, logout, redirectToLogin } = useAuthCart();
-  const nomeCliente = user?.nome || 'Visitante';
-  const idCliente = user?.id;
-  const produtosFiltrados = produtos.filter(p => 
-    p.nome.toLowerCase().includes(busca.toLowerCase())
-  );
+  
+  const nomeCliente = localStorage.getItem('nome_cliente') || 'Cliente';
+  const idCliente = localStorage.getItem('id_cliente'); // ID salvo no login
+  const token = localStorage.getItem('token');
 
   const slides = [
     { url: "https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=1200", title: "Tecnologia e Qualidade ao seu alcance.", subtitle: "Explore o nosso stock atualizado com os melhores preços de Angola." },
@@ -27,18 +28,29 @@ export default function LojaHome() {
     { url: "https://images.unsplash.com/photo-1562259949-e8e7689d7828?q=80&w=1200", title: "Materiais de Construção.", subtitle: "A garantia de durabilidade para o seu projeto." }
   ];
 
+  // Salva carrinho no localStorage sempre que mudar
   useEffect(() => {
+    localStorage.setItem('carrinho_cliente', JSON.stringify(carrinho));
+  }, [carrinho]);
+
+  useEffect(() => {
+    if (!token) {
+      navigate('/login-cliente');
+      return;
+    }
     fetchProdutos();
 
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
     }, 5000);
     return () => clearInterval(interval);
-  }, [slides.length]);
+  }, [token, slides.length]);
 
   const fetchProdutos = async () => {
     try {
-      const res = await fetch(apiUrl('/api/produtos'));
+      const res = await fetch(apiUrl('/api/produtos'), {
+        headers: { 'x-access-token': token }
+      });
       const data = await res.json();
       setProdutos(data);
     } catch (err) {
@@ -47,31 +59,45 @@ export default function LojaHome() {
   };
 
   const handleLogout = () => {
-    logout();
+    localStorage.removeItem('token');
+    localStorage.removeItem('nome_cliente');
+    localStorage.removeItem('id_cliente');
+    localStorage.removeItem('carrinho_cliente');
+    toast.info("Sessão terminada");
+    navigate('/login-cliente');
   };
 
   // LÓGICA DO CARRINHO
-  const adicionarAoCarrinho = async (produto, e) => {
+  const adicionarAoCarrinho = (produto, e) => {
     if (e) e.stopPropagation();
-    await addItemToCart(produto);
+    const existe = carrinho.find(item => item.id === produto.id);
+    if (existe) {
+      setCarrinho(carrinho.map(item => item.id === produto.id ? { ...existe, qtd: existe.qtd + 1 } : item));
+    } else {
+      setCarrinho([...carrinho, { ...produto, qtd: 1 }]);
+    }
+    toast.success(`${produto.nome} adicionado!`);
   };
 
-  const alterarQtd = async (id, delta) => {
-    await updateCartQuantity(id, delta);
+  const alterarQtd = (id, delta) => {
+    setCarrinho(carrinho.map(item => 
+      item.id === id ? { ...item, qtd: Math.max(1, item.qtd + delta) } : item
+    ));
   };
 
-  const removerDoCarrinho = async (carrinhoId) => {
-    await removeItemFromCart(carrinhoId);
+  const removerDoCarrinho = (id) => {
+    setCarrinho(carrinho.filter(item => item.id !== id));
+    toast.error("Item removido");
   };
 
-  const totalCarrinho = cart.reduce((sum, item) => sum + (item.preco_venda * item.qtd), 0);
+  const totalCarrinho = carrinho.reduce((sum, item) => sum + (item.preco_venda * item.qtd), 0);
 
   // NOVA FUNÇÃO: FINALIZAR PEDIDO NO BANCO DE DADOS
   const finalizarPedido = async () => {
-    if (cart.length === 0) return;
-    if (!user) {
-      redirectToLogin('Faça login para finalizar o pedido.');
-      return;
+    if (carrinho.length === 0) return;
+    if (!idCliente) {
+        toast.error("Erro de identificação do cliente. Por favor, faça login novamente.");
+        return;
     }
 
     setEnviando(true);
@@ -79,8 +105,8 @@ export default function LojaHome() {
     const pedidoData = {
       cliente_id: idCliente,
       total: totalCarrinho,
-      itens: cart.map(item => ({
-        produto_id: item.produto_id,
+      itens: carrinho.map(item => ({
+        produto_id: item.id,
         quantidade: item.qtd,
         preco_unitario: item.preco_venda
       }))
@@ -91,14 +117,14 @@ export default function LojaHome() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'x-access-token': user?.token 
+          'x-access-token': token 
         },
         body: JSON.stringify(pedidoData)
       });
 
       if (res.ok) {
         toast.success("Pedido enviado! Aguarde a validação do administrador.");
-        await clearCart();
+        setCarrinho([]);
         setIsCarrinhoAberto(false);
       } else {
         const error = await res.json();
@@ -111,52 +137,69 @@ export default function LojaHome() {
     }
   };
 
+  const produtosFiltrados = produtos.filter(p => 
+    p.nome.toLowerCase().includes(busca.toLowerCase())
+  );
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white">
-              <ShoppingBag size={24} />
+        <div className="max-w-7xl mx-auto px-4 py-3 md:h-20 md:py-0 flex flex-col justify-center gap-3 md:gap-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white">
+                <ShoppingBag size={24} />
+              </div>
+              <span className="text-xl font-black text-slate-800 hidden md:block">A.R.F <span className="text-blue-600">Comercial</span></span>
             </div>
-            <span className="text-xl font-black text-slate-800 hidden md:block">A.R.F <span className="text-blue-600">Comercial</span></span>
+
+            <div className="flex-1 max-w-md mx-8 relative hidden md:block">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="O que procura hoje?"
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-100 border-none rounded-full focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+              />
+            </div>
+
+            <div className="flex items-center gap-6">
+              <div className="hidden sm:block text-right">
+                <p className="text-xs text-slate-500 font-medium leading-none">Olá, bem-vindo</p>
+                <p className="text-sm font-bold text-slate-800">{nomeCliente}</p>
+              </div>
+              
+              <button onClick={() => setIsCarrinhoAberto(true)} className="relative p-2 text-slate-600 hover:text-blue-600 transition-colors cursor-pointer">
+                <ShoppingCart size={24} />
+                {carrinho.length > 0 && (
+                  <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center animate-bounce">
+                    {carrinho.length}
+                  </span>
+                )}
+              </button>
+
+              <button onClick={() => navigate('/meus-pedidos')} className="p-2 text-slate-400 hover:text-blue-500 transition-colors cursor-pointer" title="Meus Pedidos">
+                <Package size={24} />
+              </button>
+              <button onClick={() => navigate('/notificacoes-cliente')} className="p-2 text-slate-400 hover:text-blue-500 transition-colors cursor-pointer" title="Notificações">
+                <Bell size={24} />
+              </button>
+              <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-500 transition-colors cursor-pointer">
+                <LogOut size={24} />
+              </button>
+            </div>
           </div>
 
-          <div className="flex-1 max-w-md mx-8 relative hidden md:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+          <div className="relative md:hidden">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
             <input 
-              type="text" 
+              type="text"
               placeholder="O que procura hoje?"
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-100 border-none rounded-full focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+              className="w-full pl-10 pr-4 py-2.5 bg-slate-100 rounded-full border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
             />
-          </div>
-
-          <div className="flex items-center gap-6">
-            <div className="hidden sm:block text-right">
-              <p className="text-xs text-slate-500 font-medium leading-none">Olá, bem-vindo</p>
-              <p className="text-sm font-bold text-slate-800">{nomeCliente}</p>
-            </div>
-            
-            <button onClick={() => setIsCarrinhoAberto(true)} className="relative p-2 text-slate-600 hover:text-blue-600 transition-colors cursor-pointer">
-              <ShoppingCart size={24} />
-              {cart.length > 0 && (
-                <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center animate-bounce">
-                  {cart.length}
-                </span>
-              )}
-            </button>
-
-            <button onClick={() => navigate('/meus-pedidos')} className="p-2 text-slate-400 hover:text-blue-500 transition-colors cursor-pointer" title="Meus Pedidos">
-              <Package size={24} />
-            </button>
-            <button onClick={() => navigate('/notificacoes-cliente')} className="p-2 text-slate-400 hover:text-blue-500 transition-colors cursor-pointer" title="Notificações">
-              <Bell size={24} />
-            </button>
-            <button onClick={handleLogout} className="p-2 text-slate-400 hover:text-red-500 transition-colors cursor-pointer">
-              <LogOut size={24} />
-            </button>
           </div>
         </div>
       </nav>
@@ -247,13 +290,13 @@ export default function LojaHome() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              {cart.length === 0 ? (
+              {carrinho.length === 0 ? (
                 <div className="text-center py-20 text-slate-400">
                   <ShoppingBag size={48} className="mx-auto mb-4 opacity-20" />
                   <p className="font-medium">O seu carrinho está vazio</p>
                 </div>
               ) : (
-                cart.map(item => (
+                carrinho.map(item => (
                   <div key={item.id} className="flex gap-4 bg-slate-50 p-4 rounded-3xl border border-slate-100 group transition-all">
                     <img src={item.imagem_url} className="w-16 h-16 rounded-2xl object-cover bg-white p-1 border border-slate-200" alt="" />
                     <div className="flex-1 min-w-0">
@@ -265,7 +308,7 @@ export default function LojaHome() {
                           <span className="font-black text-sm w-4 text-center">{item.qtd}</span>
                           <button onClick={() => alterarQtd(item.id, 1)} className="text-slate-400 hover:text-blue-600"><Plus size={14} /></button>
                         </div>
-                        <button onClick={() => removerDoCarrinho(item.carrinhoId)} className="text-slate-300 hover:text-red-500 p-2 transition-colors"><Trash2 size={18} /></button>
+                        <button onClick={() => removerDoCarrinho(item.id)} className="text-slate-300 hover:text-red-500 p-2 transition-colors"><Trash2 size={18} /></button>
                       </div>
                     </div>
                   </div>
@@ -280,7 +323,7 @@ export default function LojaHome() {
               </div>
               <button 
                 onClick={finalizarPedido} 
-                disabled={cart.length === 0 || enviando}
+                disabled={carrinho.length === 0 || enviando}
                 className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black shadow-xl shadow-blue-100 flex items-center justify-center gap-3 disabled:bg-slate-300 active:scale-95 transition-all uppercase text-xs tracking-widest"
               >
                 {enviando ? "Processando..." : "Confirmar Pedido"}

@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import { verifyJWT, verifyAdmin } from '../middlewares/auth.js';
+import * as vendasController from '../controllers/vendasController.js';
+
 const router = express.Router();
-const { verifyJWT, verifyAdmin } = require('../middlewares/auth');
-const vendasController = require('../controllers/vendasController');
 
 // todas as rotas aqui exigem token
 router.use(verifyJWT);

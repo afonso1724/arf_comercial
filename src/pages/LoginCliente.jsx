@@ -1,27 +1,18 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiUrl } from '../config/api';
-import { useAuthCart } from '../contexts/AuthCartContext';
 
 export default function LoginCliente() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { login } = useAuthCart();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
 
-  useEffect(() => {
-    if (location.state?.message) {
-      toast(location.state.message);
-    }
-  }, [location.state]);
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+const handleLogin = async (e) => {
+  e.preventDefault();
+  setLoading(true);
 
   try {
       const res = await fetch(apiUrl('/api/cliente/login'), {
@@ -33,9 +24,12 @@ export default function LoginCliente() {
     const data = await res.json(); // token, id e nome retornados pela API
 
     if (res.ok) {
-      login({ token: data.token, id: data.id, nome: data.nome });
+      // guardar token genérico para uso tanto no admin quanto no cliente
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('nome_cliente', data.nome);
+      localStorage.setItem('id_cliente', data.id);
       toast.success(`Bem-vindo, ${data.nome}!`);
-      navigate(location.state?.from || '/loja', { replace: true });
+      navigate('/loja');
     } else {
       toast.error(data.error || "Erro no login");
     }

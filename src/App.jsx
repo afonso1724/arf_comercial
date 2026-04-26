@@ -16,7 +16,6 @@ import NotificacoesAdm from './pages/NotificacoesAdm';
 import NotificacoesCliente from './pages/NotificacoesCliente';
 import Relatorios from './pages/Relatorios';
 import Configuracoes from './pages/Configuracoes';
-import { AuthCartProvider } from './contexts/AuthCartContext';
 
 // Componente de Proteção de Rota
 // helper to decode jwt payload
@@ -62,20 +61,18 @@ export default function App() {
   return (
     <BrowserRouter>
       <Toaster position="top-right" richColors closeButton />
-      <AuthCartProvider>
-        <Routes>
-          {/* ROTA PÚBLICA */}
-          <Route path="/" element={<Login />} />
-          <Route path="/login" element={<LoginCliente />} />
+      <Routes>
+        {/* ROTA PÚBLICA */}
+        <Route path="/" element={<Login />} />
 
-          {/* ROTAS PROTEGIDAS */}
-          <Route path="/dashboard" element={
-            <PrivateRoute>
-              <Layout>
-                <Dashboard />
-              </Layout>
-            </PrivateRoute>
-          } />
+        {/* ROTAS PROTEGIDAS */}
+        <Route path="/dashboard" element={
+          <PrivateRoute>
+            <Layout>
+              <Dashboard />
+            </Layout>
+          </PrivateRoute>
+        } />
 
         <Route path="/perfil" element={
           <PrivateRoute>
@@ -125,7 +122,11 @@ export default function App() {
 
         <Route path="/register" element={<RegisterCliente />} />
         <Route path="/login-cliente" element={<LoginCliente />} />
-        <Route path="/loja" element={<LojaHome />} />
+        <Route path="/loja" element={
+          <PrivateRoute>
+            <LojaHome />
+          </PrivateRoute>
+        } />
         <Route path="/meus-pedidos" element={
           <PrivateRoute>
             <ClienteLayout>
@@ -143,9 +144,8 @@ export default function App() {
         } />
 
         {/* REDIRECIONAMENTO GLOBAL */}
-        <Route path="*" element={<Navigate to="/loja" />} />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
-      </AuthCartProvider>
     </BrowserRouter>
   );
 }
