@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, User } from 'lucide-react';
 import { toast } from 'sonner'; 
-import { apiUrl } from '../config/api';
 
 import loginImg from '../assets/fundo_login1.jpg'; 
 
@@ -24,10 +23,10 @@ export default function Login() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(apiUrl('/api/login'), {
+      const response = await fetch('http://localhost:3001/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }) // Agora enviamos password conforme o backend espera
+        body: JSON.stringify({ email, password }) 
       });
 
       const data = await response.json();

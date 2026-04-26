@@ -87,7 +87,8 @@ app.post('/api/cliente/login', async (req, res) => {
 
 app.post('/api/vendas', verifyJWT, async (req, res) => {
   try {
-    const { cliente_id, total, status = 'pendente', itens = [] } = req.body;
+    const { total, status = 'pendente', itens = [] } = req.body;
+    const cliente_id = req.userId;
 
     if (!cliente_id || !Array.isArray(itens) || itens.length === 0) {
       return res.status(400).json({ error: 'cliente_id e itens são obrigatórios' });
@@ -118,6 +119,15 @@ app.post('/api/vendas', verifyJWT, async (req, res) => {
     if (errItens) {
       console.error('Erro inserir itens da venda:', errItens);
       return res.status(500).json({ error: 'Erro ao inserir itens da venda' });
+    }
+
+    const { error: errLimpar } = await supabase
+      .from('carrinho')
+      .delete()
+      .eq('cliente_id', cliente_id);
+
+    if (errLimpar) {
+      console.error('Erro limpar carrinho após venda:', errLimpar);
     }
 
     res.json({ message: 'Venda cadastrada com sucesso', vendaId: venda.id, itens: itensInseridos });
@@ -215,7 +225,7 @@ app.put('/api/perfil/password', verifyJWT, async (req, res) => {
   }
 });
 
-app.get('/api/produtos', verifyJWT, async (req, res) => {
+app.get('/api/produtos', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('produtos')
@@ -226,6 +236,107 @@ app.get('/api/produtos', verifyJWT, async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error('Erro /api/produtos', err);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+app.get('/api/carrinho', verifyJWT, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('carrinho')
+      .select('id, produto_id, quantidade, produtos(*)')
+      .eq('cliente_id', req.userId)
+      .order('criado_em', { ascending: true });
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+  } catch (err) {
+    console.error('Erro /api/carrinho GET', err);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+app.post('/api/carrinho', verifyJWT, async (req, res) => {
+  try {
+    const { produto_id, quantidade, delta } = req.body;
+    if (!produto_id) return res.status(400).json({ error: 'produto_id é obrigatório' });
+
+    const { data: existing, error: selectError } = await supabase
+      .from('carrinho')
+      .select('*')
+      .eq('cliente_id', req.userId)
+      .eq('produto_id', produto_id)
+      .maybeSingle();
+
+    if (selectError) {
+      console.error('Erro buscar item de carrinho:', selectError);
+      return res.status(500).json({ error: 'Erro interno' });
+    }
+
+    const currentQuantity = existing?.quantidade ?? 0;
+    const nextQuantity = Number.isInteger(quantidade) ? quantidade : currentQuantity + (Number.isInteger(delta) ? delta : 1);
+
+    if (nextQuantity <= 0) {
+      const { error: deleteError } = await supabase
+        .from('carrinho')
+        .delete()
+        .eq('cliente_id', req.userId)
+        .eq('produto_id', produto_id);
+
+      if (deleteError) return res.status(500).json({ error: deleteError.message });
+      return res.json({ message: 'Item removido do carrinho' });
+    }
+
+    if (existing) {
+      const { error: updateError } = await supabase
+        .from('carrinho')
+        .update({ quantidade: nextQuantity })
+        .eq('id', existing.id);
+
+      if (updateError) return res.status(500).json({ error: updateError.message });
+      return res.json({ message: 'Carrinho atualizado' });
+    }
+
+    const { error: insertError } = await supabase
+      .from('carrinho')
+      .insert([{ cliente_id: req.userId, produto_id, quantidade: nextQuantity }]);
+
+    if (insertError) return res.status(500).json({ error: insertError.message });
+    res.json({ message: 'Item adicionado ao carrinho' });
+  } catch (err) {
+    console.error('Erro /api/carrinho POST', err);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+app.delete('/api/carrinho/:id', verifyJWT, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase
+      .from('carrinho')
+      .delete()
+      .eq('id', id)
+      .eq('cliente_id', req.userId);
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ message: 'Item removido do carrinho' });
+  } catch (err) {
+    console.error('Erro /api/carrinho DELETE', err);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+app.delete('/api/carrinho', verifyJWT, async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('carrinho')
+      .delete()
+      .eq('cliente_id', req.userId);
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ message: 'Carrinho limpo' });
+  } catch (err) {
+    console.error('Erro /api/carrinho clear', err);
     res.status(500).json({ error: 'Erro interno' });
   }
 });

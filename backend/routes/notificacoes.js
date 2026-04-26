@@ -1,8 +1,7 @@
-import express from 'express';
-import { verifyJWT, verifyAdmin } from '../middlewares/auth.js';
-import * as notificacoesController from '../controllers/notificacoesController.js';
-
+const express = require('express');
 const router = express.Router();
+const { verifyJWT, verifyAdmin } = require('../middlewares/auth');
+const notificacoesController = require('../controllers/notificacoesController');
 
 router.use(verifyJWT);
 
